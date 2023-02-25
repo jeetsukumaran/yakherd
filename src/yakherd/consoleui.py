@@ -494,10 +494,16 @@ class AttachableSubParsers:
         command,
         **kwargs,
     ):
-        return self.attach_to_parser(
-            parser=command.parser,
-            **kwargs
-        )
+        try:
+            return self.attach_to_parser(
+                parser=command.parser,
+                **kwargs
+            )
+        except AttributeError:
+            return self.attach_to_parser(
+                parser=command,
+                **kwargs
+            )
 
 # AttachableSubParsers }}}1
 
