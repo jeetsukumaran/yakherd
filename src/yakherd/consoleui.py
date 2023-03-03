@@ -564,22 +564,22 @@ class LoggerConfigurationParser(AttachableSubParsers):
     def attach_to_parser(
         self,
         parser=None,
-        console_logging_group=None,
-        file_logging_group=None,
+        console_logging_parser_group=None,
+        file_logging_parser_group=None,
         console_logging_group_name="Console Logging Options",
-        file_logging_group_name="File Logging Options",
+        file_logging_parser_group_name="File Logging Options",
     ):
         if parser is None:
             parser = argparse.ArgumentParser(add_help=False)
-        if console_logging_group is None:
-            console_logging_group = parser.add_argument_group(console_logging_group_name)
-        elif console_logging_group is False:
-            console_logging_group = parser
-        if file_logging_group is None:
-            file_logging_group = parser.add_argument_group(file_logging_group_name)
-        elif file_logging_group is False:
-            file_logging_group = parser
-        console_logging_group.add_argument(
+        if console_logging_parser_group is None:
+            self.console_logging_parser_group = parser.add_argument_group(console_logging_group_name)
+        elif console_logging_parser_group is False:
+            self.console_logging_parser_group = parser
+        if file_logging_parser_group is None:
+            self.file_logging_parser_group = parser.add_argument_group(file_logging_parser_group_name)
+        elif file_logging_parser_group is False:
+            self.file_logging_parser_group = parser
+        self.console_logging_parser_group.add_argument(
             "--verbosity",
             metavar="NOISE-LEVEL",
             dest="__logging_max_allowed_message_noise_level",
@@ -587,7 +587,7 @@ class LoggerConfigurationParser(AttachableSubParsers):
             default=1,
             help="Maximum allowed message noise level [default = %(default)s].",
         )
-        console_logging_group.add_argument(
+        self.console_logging_parser_group.add_argument(
             "-q",
             "--quiet",
             "--no-console-log",
@@ -595,22 +595,22 @@ class LoggerConfigurationParser(AttachableSubParsers):
             dest="__logging_no_console_log",
             help="Do not write logs to console.",
         )
-        console_logging_group.add_argument(
+        self.console_logging_parser_group.add_argument(
             "--console-color-theme",
             dest="__logging_color_theme",
             metavar="THEME",
             default="default-dark-bg",
             help="Theme for output colors ('default-dark-bg', 'None')",
         )
-        console_logging_group.add_argument(
+        self.console_logging_parser_group.add_argument(
             "--console-no-color",
             action="store_true",
             dest="__logging_no_color",
             default=None,
             help="Do not write to console in color.",
         )
-        file_logging_group = parser.add_argument_group("File Logging Options")
-        file_logging_group.add_argument(
+        self.file_logging_parser_group = parser.add_argument_group("File Logging Options")
+        self.file_logging_parser_group.add_argument(
             "--logfile",
             metavar="FILE",
             dest="__logging_file_path",
