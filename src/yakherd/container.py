@@ -1,4 +1,3 @@
-
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -31,20 +30,80 @@
 ##
 ##############################################################################
 
+import heapq
 import collections
+
 
 def flatten_dict(d, separator=".", parent_key=""):
     items = []
     for k, v in d.items():
         new_key = str(parent_key) + separator + str(k) if parent_key else str(k)
         if v and isinstance(v, collections.MutableMapping):
-            items.extend(flatten_dict(v, separator=separator, parent_key=parent_key).items())
+            items.extend(
+                flatten_dict(v, separator=separator, parent_key=parent_key).items()
+            )
         else:
             items.append((new_key, v))
     return dict(items)
 
-class AttributeSetterDict(dict):
 
+class ObjectHeap:
+    """
+    Object-oriented wrapper of `heapq`, with no requirement that heap items
+    define a bound `__lt__` method. Instead, ``key_fn`` will be used: this
+    should be a function that takes two arguments, and returns the `__lt__`
+    ranking value.
+    """
+
+    class _ObjectHeapItem:
+        def __init__(
+            self,
+            containing_heap,
+            value,
+        ):
+            self._containing_heap = containing_heap
+            self._value = value
+
+        def __lt__(self, other):
+            # return self._containing_heap.key_fn(self._value) < self._containing_heap.key_fn(other._value)
+            return self._containing_heap.key_fn(self._value, other._value)
+
+    def __init__(self, initial=None, key_fn=lambda x: x):
+        self.key_fn = key_fn
+        self.index = 0
+        self._item_factory = ObjectHeap._ObjectHeapItem
+        if initial:
+            self._data = [self._item_factory(self, v) for v in initial]
+            heapq.heapify(self._data)
+        else:
+            self._data = []
+
+    @property
+    def key_fn(self):
+        if (
+            not hasattr(self, "_key_fn")
+            or self._key_fn is None
+        ):
+            self._key_fn = lambda o1, o2: o1 < o2
+        return self._key_fn
+    @key_fn.setter
+    def key_fn(self, value):
+        self._key_fn = value
+        if hasattr(self, "_data") and self._data:
+            heapq.heapify(self._data)
+    @key_fn.deleter
+    def key_fn(self):
+        del self._key_fn
+
+    def push(self, item):
+        heapq.heappush(self._data, self._item_factory(self, item))
+        self.index += 1
+
+    def pop(self):
+        return heapq.heappop(self._data)[2].value
+
+
+class AttributeSetterDict(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -70,6 +129,7 @@ class AttributeSetterDict(dict):
             key_map_fn=key_map_fn,
         )
 
+
 class Table:
     """
     A *table* serves to transact/extract/organize data from the system.
@@ -82,11 +142,14 @@ class Table:
     class Record(dict):
         pass
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self._records = []
 
     def add(self, record, label=None):
         self._records.append(record)
+
 
 class AttributeMap(dict):
 
@@ -122,15 +185,15 @@ class AttributeMap(dict):
         else:
             raise AttributeError("No such attribute: " + attr_key)
 
-class RecursiveAttributeMap(AttributeMap):
 
+class RecursiveAttributeMap(AttributeMap):
     def __setitem__(self, attr_key, value):
         if type(value) is dict:
             value = self.__class__(value)
         super().__setitem__(attr_key, value)
 
-class NormalizedAttributeMap(AttributeMap):
 
+class NormalizedAttributeMap(AttributeMap):
     def normalize_key(self, key):
         try:
             return key.replace("-", "_").lower()
@@ -143,8 +206,10 @@ class NormalizedAttributeMap(AttributeMap):
     def __setitem__(self, key, value):
         return AttributeMap.__setitem__(self, self.normalize_key(key), value)
 
+
 class RecursiveNormalizedAttributeMap(RecursiveAttributeMap, NormalizedAttributeMap):
     pass
+
 
 # class RecursiveNormalizedAttributeMap(RecursiveAttributeMap):
 #     def normalize_key(self, key):
@@ -216,15 +281,14 @@ class Catalog:
 
     @property
     def identity_key_fn(self):
-        if (
-            not hasattr(self, "_identity_key_fn")
-            or self._identity_key_fn is None
-        ):
+        if not hasattr(self, "_identity_key_fn") or self._identity_key_fn is None:
             self._identity_key_fn = self.default_identity_key_fn
         return self._identity_key_fn
+
     @identity_key_fn.setter
     def identity_key_fn(self, value):
         self._identity_key_fn = value
+
     @identity_key_fn.deleter
     def identity_key_fn(self):
         del self._identity_key_fn
@@ -236,7 +300,9 @@ class Catalog:
     #     reference_value.identity_key = identity_key
 
     def generate_next_identity_key(self):
-        return self.identity_key_fn(new_reference_value_index=self._next_reference_value_index)
+        return self.identity_key_fn(
+            new_reference_value_index=self._next_reference_value_index
+        )
 
     def reference_values(self):
         return self._identity_key_reference_value_map.values()
@@ -246,6 +312,7 @@ class Catalog:
 
     def reference_value(self, identity_key):
         return self._identity_key_reference_value_map[identity_key]
+
 
 class OrderedSet(collections.abc.MutableSet):
     """
@@ -260,8 +327,8 @@ class OrderedSet(collections.abc.MutableSet):
 
     def __init__(self, iterable=None):
         self.end = end = []
-        end += [None, end, end]         # sentinel node for doubly linked list
-        self._data = {}                   # key --> [key, prev, next]
+        end += [None, end, end]  # sentinel node for doubly linked list
+        self._data = {}  # key --> [key, prev, next]
         if iterable is not None:
             self |= iterable
 
@@ -299,15 +366,15 @@ class OrderedSet(collections.abc.MutableSet):
 
     def pop(self, last=True):
         if not self:
-            raise KeyError('set is empty')
+            raise KeyError("set is empty")
         key = self.end[1][0] if last else self.end[2][0]
         self.discard(key)
         return key
 
     def __repr__(self):
         if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
+            return "%s()" % (self.__class__.__name__,)
+        return "%s(%r)" % (self.__class__.__name__, list(self))
 
     def __eq__(self, other):
         if isinstance(other, OrderedSet):
@@ -320,4 +387,3 @@ class OrderedSet(collections.abc.MutableSet):
         # for idx, key in enumerate(self._data):
         #     if idx == selected_idx:
         #         return key
-
