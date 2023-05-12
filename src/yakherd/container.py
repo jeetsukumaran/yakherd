@@ -102,6 +102,9 @@ class ObjectHeap:
     def pop(self):
         return heapq.heappop(self._data)[2].value
 
+    def __iter__(self):
+        for item in sorted(self._data):
+            yield item._value
 
 class AttributeSetterDict(dict):
     def __init__(self, *args, **kwargs):
