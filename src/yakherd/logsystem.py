@@ -412,7 +412,7 @@ class Logger:
         ]:
             level = level_name
         elif level_name is not None:
-            level_name = str(level).upper()
+            level_name = str(level_name).upper()
         elif _LOGGING_LEVEL_ENVAR in os.environ:
             level_name = os.environ[_LOGGING_LEVEL_ENVAR].upper()
         else:
